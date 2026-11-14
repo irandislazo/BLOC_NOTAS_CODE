@@ -1,0 +1,4 @@
+flet==0.80.5
+flet-webview==0.80.5
+pygments
+jedi
