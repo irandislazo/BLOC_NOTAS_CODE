@@ -10,7 +10,8 @@ except Exception:
 VER = "0.52.2"
 CDN = f"https://cdn.jsdelivr.net/npm/monaco-editor@{VER}/min/vs"
 TGZ = f"https://registry.npmjs.org/monaco-editor/-/monaco-editor-{VER}.tgz"
-CACHE = os.path.join(os.path.expanduser("~"), ".bloc_monaco")
+_T = "/data/data/com.termux/files"
+CACHE = os.path.join(_T if os.access(_T, os.W_OK) else os.path.expanduser("~"), ".bloc_monaco")
 MIME = {".js": "application/javascript", ".css": "text/css", ".ttf": "font/ttf", ".json": "application/json",
         ".html": "text/html; charset=utf-8", ".map": "application/json", ".svg": "image/svg+xml"}
 
@@ -34,6 +35,24 @@ def find_local():
         if base == CACHE and os.path.isfile(os.path.join(base, "vs", "loader.js")):
             return base
     return None
+
+
+XT = {"xterm.js": "xterm@5.3.0/lib/xterm.js", "xterm.css": "xterm@5.3.0/css/xterm.css", "xterm-addon-fit.js": "xterm-addon-fit@0.8.0/lib/xterm-addon-fit.js"}
+
+
+def xt_dir():
+    here = os.path.dirname(os.path.abspath(__file__))
+    for b in (os.path.join(here, "xterm"), os.path.join(CACHE, "xterm")):
+        if all(os.path.isfile(os.path.join(b, f)) for f in XT):
+            return b
+
+
+def xt_download():
+    d = os.path.join(CACHE, "xterm")
+    os.makedirs(d, exist_ok=True)
+    for f, u in XT.items():
+        with open(os.path.join(d, f), "wb") as o:
+            o.write(urllib.request.urlopen("https://cdn.jsdelivr.net/npm/" + u, timeout=60).read())
 
 
 class _Win32:
@@ -166,8 +185,8 @@ W32 = _Win32() if sys.platform == "win32" else None
 
 
 PAGE = r"""<!doctype html><html><head><meta charset="utf-8"><title>Editor de código [__PORT__]</title>
-<style>html,body,#c{margin:0;height:100%;width:100%;overflow:hidden;background:#0b0d10}</style></head>
-<body><div id="c"></div>
+<style>html,body,#c{margin:0;height:100%;width:100%;overflow:hidden;background:#0b0d10}</style><style>#m{position:fixed;left:8px;top:8px;right:8px;z-index:9;color:#9aa;font:13px monospace;white-space:pre-wrap;pointer-events:none}</style></head>
+<body><pre id="m">Cargando editor...</pre><script>addEventListener('error',function(e){var o=document.getElementById('m');if(o)o.textContent+='\n'+(e.message||('no carga: '+(e.target&&(e.target.src||e.target.href))))},true);function ok(){var o=document.getElementById('m');if(o)o.remove()}</script><div id="c"></div>
 <script src="__VS__/loader.js"></script>
 <script>
 const VS="__VS__", ABS = VS.startsWith('http') ? VS : location.origin + VS;
@@ -180,6 +199,7 @@ require(['vs/editor/editor.main'],()=>{
   'editorLineNumber.activeForeground':'#9aa4b5','editor.lineHighlightBackground':'#12151a',
   'editor.selectionBackground':'#2a3a5c','editorCursor.foreground':'#7aa2f7','editorGutter.background':'#0b0d10',
   'minimap.background':'#0b0d10'}});
+ ok();
  const CK={module:'Module',class:'Class',function:'Function',keyword:'Keyword',property:'Property',path:'File'};
  monaco.languages.registerCompletionItemProvider('python',{triggerCharacters:['.'],provideCompletionItems:async(m,p)=>{
   try{const r=await fetch('/complete',{method:'POST',body:JSON.stringify({code:m.getValue(),line:p.lineNumber,col:p.column-1})});
@@ -231,8 +251,8 @@ require(['vs/editor/editor.main'],()=>{
 TERM_PAGE = r"""<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <link rel="stylesheet" href="/xterm/xterm.css"><style>html,body{margin:0;height:100%;background:#0b0d10;overflow:hidden}
 #t{height:calc(100% - 38px)}#k{height:38px;display:flex;gap:4px;padding:3px;box-sizing:border-box;background:#12151a}
-#k button{flex:1;background:#232830;color:#d7dae0;border:0;border-radius:4px;font:14px monospace}#k .on{background:#7aa2f7;color:#000}</style></head>
-<body><div id="t"></div><div id="k"></div>
+#k button{flex:1;background:#232830;color:#d7dae0;border:0;border-radius:4px;font:14px monospace}#k .on{background:#7aa2f7;color:#000}</style><style>#m{position:fixed;left:8px;top:8px;right:8px;z-index:9;color:#9aa;font:13px monospace;white-space:pre-wrap;pointer-events:none}</style></head>
+<body><pre id="m">Cargando terminal...</pre><script>addEventListener('error',function(e){var o=document.getElementById('m');if(o)o.textContent+='\n'+(e.message||('no carga: '+(e.target&&(e.target.src||e.target.href))))},true);function ok(){var o=document.getElementById('m');if(o)o.remove()}</script><div id="t"></div><div id="k"></div>
 <script src="/xterm/xterm.js"></script><script src="/xterm/xterm-addon-fit.js"></script><script>
 const T=new Terminal({fontSize:14,fontFamily:'monospace',cursorBlink:true,scrollback:5000,theme:{background:'#0b0d10',foreground:'#d7dae0'}});
 const F=new FitAddon.FitAddon();T.loadAddon(F);T.open(document.getElementById('t'));
@@ -246,7 +266,7 @@ const add=(l,f)=>{const b=document.createElement('button');b.textContent=l;b.onp
 const cb=add('Ctrl',()=>{ctl=!ctl;cb.className=ctl?'on':'';});
 [['Esc','\x1b'],['Tab','\t'],['\u2191','\x1b[A'],['\u2193','\x1b[B'],['\u2190','\x1b[D'],['\u2192','\x1b[C'],['^C','\x03']].forEach(([l,v])=>add(l,()=>post('/t/in',v)));
 (async()=>{post('/t/start','');fit();while(1){try{const r=await(await fetch('/t/read?p='+pos)).json();pos=r.p;
- if(r.d){const b=atob(r.d),u=new Uint8Array(b.length);for(let i=0;i<b.length;i++)u[i]=b.charCodeAt(i);T.write(u);}}catch(e){}
+ if(r.d){ok();const b=atob(r.d),u=new Uint8Array(b.length);for(let i=0;i<b.length;i++)u[i]=b.charCodeAt(i);T.write(u);}}catch(e){}
  await new Promise(s=>setTimeout(s,60));}})();
 </script></body></html>"""
 
@@ -264,6 +284,8 @@ class Bridge:
         self.port = self.srv.server_address[1]
         self.url = f"http://127.0.0.1:{self.port}/editor.html"
         threading.Thread(target=self.srv.serve_forever, daemon=True).start()
+        if not xt_dir():
+            threading.Thread(target=lambda: xt_download(), daemon=True).start()
         if not self.root:
             threading.Thread(target=self._download, daemon=True).start()
 
@@ -450,7 +472,7 @@ class Bridge:
                     p, d = br.term.read(int(parse_qs(u.query).get("p", ["0"])[0]))
                     self._send(json.dumps({"p": p, "d": base64.b64encode(d).decode()}))
                 elif u.path.startswith("/xterm/"):
-                    p = os.path.join(os.path.dirname(os.path.abspath(__file__)), "xterm", os.path.basename(u.path))
+                    p = os.path.join(xt_dir() or CACHE, "xterm", os.path.basename(u.path)) if False else os.path.join(xt_dir() or os.path.join(CACHE, "xterm"), os.path.basename(u.path))
                     if os.path.isfile(p):
                         with open(p, "rb") as f:
                             self._send(f.read(), MIME.get(os.path.splitext(p)[1], "application/octet-stream"))

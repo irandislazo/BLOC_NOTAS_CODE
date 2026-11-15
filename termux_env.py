@@ -102,6 +102,7 @@ class Term:
     def start(self):
         if not self.started:
             self.started = True
+            self.out('Iniciando entorno...\r\n')
             threading.Thread(target=self._boot, daemon=True).start()
 
     def _boot(self):
