@@ -177,7 +177,7 @@ def main(page: ft.Page):
         try:
             mb = monaco_bridge.Bridge(lambda ev: on_monaco(ev), S["size"], lambda m: note(m))
             if EMBED:
-                code_box = W(ft.Container, W(fwv.WebView, url=mb.url, expand=True, bgcolor=BG), expand=True, bgcolor=BG, visible=False)
+                code_box = W(ft.Container, W(fwv.WebView, url=mb.url, enable_javascript=True, expand=True, bgcolor=BG), expand=True, bgcolor=BG, visible=False)
             else:
                 code_box = W(ft.Container, expand=True, bgcolor=BG, visible=False)
         except Exception as _e:
@@ -194,7 +194,7 @@ def main(page: ft.Page):
             return
         if term_box.content is None:
             mb.term = termux_env.Term()
-            term_box.content = W(fwv.WebView, url=mb.url.replace("editor.html", "term.html"), expand=True, bgcolor=BG)
+            term_box.content = W(fwv.WebView, url=mb.url.replace("editor.html", "term.html"), enable_javascript=True, expand=True, bgcolor=BG)
         term_box.visible = not term_box.visible
         page.update()
 
@@ -905,7 +905,7 @@ def main(page: ft.Page):
             fullscreen()
 
     page.on_keyboard_event = on_key
-    page.add(ft.Column([W(ft.Container, ft.Row([menubar, ft.Container(expand=True)] + ([ib(ft.Icons.PLAY_ARROW, "Ejecutar", run_file), ib(ft.Icons.STOP, "Detener", stop_run), ib(ft.Icons.TERMINAL, "Terminal", toggle_term)] if MOBILE else []) + [vbtn], vertical_alignment=ft.CrossAxisAlignment.CENTER), bgcolor=BAR, height=48),
+    page.add(ft.Column([W(ft.Container, ft.Row([menubar, ft.Container(expand=True)] + ([ib(ft.Icons.FOLDER_OPEN, "Explorador", toggle_sb), ib(ft.Icons.PLAY_ARROW, "Ejecutar", run_file), ib(ft.Icons.STOP, "Detener", stop_run), ib(ft.Icons.TERMINAL, "Terminal", toggle_term)] if MOBILE else []) + [vbtn], vertical_alignment=ft.CrossAxisAlignment.CENTER), bgcolor=BAR, height=48),
                        ft.Row([strip, sidebar, grip, body], spacing=0, expand=True,
                               vertical_alignment=ft.CrossAxisAlignment.STRETCH), term_box, status_bar],
                        spacing=0, expand=True))
